@@ -8,7 +8,9 @@ import joystick
 from datetime import datetime
 import logging
 import logging.handlers
-import time
+import create_dataset as cd
+import image_capture as ic
+
 
 
 JOY_DEADZONE_A0 = 0.2
@@ -269,7 +271,7 @@ if __name__ == '__main__':
 
 
     # Set up a logger with output level set to debug; Add the handler to the logger
-    my_logger = logging.getLogger('MyLogger')
+    my_logger = logging.getLogger("My_Logger")
     my_logger.setLevel(LOG_LEVEL)
     handler = logging.handlers.RotatingFileHandler(LOG_FILENAME, maxBytes=2000000, backupCount=5)
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -281,6 +283,8 @@ if __name__ == '__main__':
     palm = reflex_sf() # Reflex object ready
 
     my_logger.info('Reflex_SF object created')
+
+    my_dataset = cd.dataset() #creating the list that will contain information on each object data collection
 
 
 
@@ -436,8 +440,18 @@ if __name__ == '__main__':
             elif event.type == pygame.JOYHATMOTION:
                 Hat = event.dict['value']
                 my_logger.debug("Hat value: {}".format(str(Hat)))
-                my_logger.info("Hat_X {} and Hat_Y {} ".format(Hat[0],Hat[1]))
-                my_logger.info("Hat movement ended ")
+                my_logger.info("Hat[0] {} and Hat[1] {} ".format(Hat[0],Hat[1]))
+                if Hat[0] == -1:
+                    object_data = cd.data(my_dataset)
+                    obj_id = object_data.param["unique_object_number"]
+                    my_cam = ic.webcam(1,0,1) #Camera =1, Autofocus = 0, focus set to 1 (1 to 27 possible values)
+                    if my_cam.capture_and_save_frame(obj_id,my_dataset) == 0:
+                        my_logger.info("Image capture failure for Unique Number = {}".format(obj_id))
+                        raise RuntimeError('Exiting the program')
+                    else:
+                        my_cam.close_video()
+                else:
+                    pass
             else:
                 pass # ignoring other event types
 
